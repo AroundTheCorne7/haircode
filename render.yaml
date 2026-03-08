@@ -3,7 +3,7 @@ services:
     name: haircode-api
     runtime: node
     plan: free
-    buildCommand: pnpm install && pnpm --filter @haircode/engine build && pnpm --filter @haircode/db build 2>/dev/null || true && pnpm --filter @haircode/api build
+    buildCommand: npm install -g pnpm && pnpm install && pnpm --filter @haircode/engine build && pnpm --filter @haircode/db build 2>/dev/null || true && pnpm --filter @haircode/api build
     startCommand: node apps/api/dist/index.js
     healthCheckPath: /health
     envVars:
