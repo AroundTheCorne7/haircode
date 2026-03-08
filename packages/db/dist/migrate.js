@@ -9,7 +9,10 @@ export async function runMigrations() {
     if (!connectionString)
         throw new Error("DATABASE_URL is not set");
     // Separate client for migrations (max 1 connection)
-    const migrationClient = postgres(connectionString, { max: 1 });
+    const migrationClient = postgres(connectionString, {
+        max: 1,
+        ssl: process.env["NODE_ENV"] === "production" ? { rejectUnauthorized: false } : false,
+    });
     const db = drizzle(migrationClient);
     console.log("Running database migrations...");
     await migrate(db, {
