@@ -1,0 +1,25 @@
+{
+  "name": "haircode",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "test": "turbo run test",
+    "db:generate": "turbo run db:generate --filter=@haircode/db",
+    "db:migrate": "turbo run db:migrate --filter=@haircode/db"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^22.0.0",
+    "prettier": "^3.3.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}

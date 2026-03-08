@@ -1,0 +1,12 @@
+{
+  "buildCommand": "pnpm --filter @haircode/engine build && pnpm --filter @haircode/web build",
+  "installCommand": "pnpm install",
+  "outputDirectory": "apps/web/.next",
+  "framework": "nextjs",
+  "rewrites": [
+    {
+      "source": "/api/v1/:path*",
+      "destination": "https://api.haircode.app/api/v1/:path*"
+    }
+  ]
+}
