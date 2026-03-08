@@ -1,4 +1,7 @@
 {
+  "framework": "nextjs",
+  "installCommand": "pnpm install",
+  "buildCommand": "pnpm --filter @haircode/engine build && pnpm --filter @haircode/web build",
   "outputDirectory": "apps/web/.next",
   "rewrites": [
     {
