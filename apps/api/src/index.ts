@@ -3,7 +3,11 @@ import { config } from "./config.js";
 import { runMigrations } from "@haircode/db";
 
 async function main() {
-  await runMigrations();
+  try {
+    await runMigrations();
+  } catch (err) {
+    console.error("Migration warning (continuing):", err);
+  }
   const app = await buildApp();
 
   try {
