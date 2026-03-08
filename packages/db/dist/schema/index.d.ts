@@ -1,0 +1,10 @@
+export * from "./tenants.js";
+export * from "./users.js";
+export * from "./clients.js";
+export * from "./hair.js";
+export * from "./scalp.js";
+export * from "./body.js";
+export * from "./morphology.js";
+export * from "./engine.js";
+export * from "./protocols.js";
+//# sourceMappingURL=index.d.ts.map

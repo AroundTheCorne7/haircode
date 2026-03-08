@@ -1,0 +1,1 @@
+{"version":3,"file":"red-flag.d.ts","sourceRoot":"","sources":["../src/red-flag.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,aAAa,EAAE,OAAO,EAAE,MAAM,YAAY,CAAC;AAEzD,wBAAgB,gBAAgB,CAC9B,OAAO,EAAE,aAAa,EACtB,YAAY,EAAE,OAAO,EAAE,GACtB;IAAE,KAAK,EAAE,OAAO,EAAE,CAAC;IAAC,YAAY,EAAE,MAAM,CAAC;IAAC,OAAO,EAAE,OAAO,CAAA;CAAE,CA+C9D"}
