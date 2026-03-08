@@ -12,6 +12,10 @@
     "db:generate": "turbo run db:generate --filter=@haircode/db",
     "db:migrate": "turbo run db:migrate --filter=@haircode/db"
   },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "devDependencies": {
     "turbo": "^2.0.0",
     "typescript": "^5.4.0",
