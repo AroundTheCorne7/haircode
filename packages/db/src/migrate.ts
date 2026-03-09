@@ -13,6 +13,7 @@ export async function runMigrations() {
   // Separate client for migrations (max 1 connection)
   const migrationClient = postgres(connectionString, {
     max: 1,
+    connect_timeout: 10,
     ssl: process.env["NODE_ENV"] === "production" ? { rejectUnauthorized: false } : false,
   });
   const db = drizzle(migrationClient);
