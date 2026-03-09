@@ -1,3 +1,5 @@
+import { setDefaultResultOrder } from "dns";
+setDefaultResultOrder("ipv4first");
 import { buildApp } from "./app.js";
 import { config } from "./config.js";
 import { runMigrations } from "@haircode/db";
