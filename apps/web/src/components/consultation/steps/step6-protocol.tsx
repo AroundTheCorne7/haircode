@@ -230,7 +230,7 @@ export function Step6Protocol({ data, onBack }: Props) {
 
     setSaving(true);
     try {
-      const res = await fetch(`${apiUrl}/clients/${data.clientId}/protocols/generate`, {
+      const res = await fetch(`${apiUrl}/api/v1/clients/${data.clientId}/protocols/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
