@@ -3,26 +3,23 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { XCircle, Camera, RotateCcw, Check } from "lucide-react";
 
-// Dynamically imported inside the component to avoid SSR issues
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type FaceApiModule = typeof import("@vladmandic/face-api");
 
 const MODEL_URL =
   "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/model/";
 
-type FaceShape =
-  | "oval"
-  | "round"
-  | "square"
-  | "heart"
-  | "diamond"
-  | "oblong"
-  | "triangle";
+type FaceShape = "oval" | "round" | "square" | "heart" | "diamond" | "oblong" | "triangle";
+type Undertone = "warm" | "neutral" | "cool";
+type ContrastLevel = "low" | "medium" | "high";
 
-interface Point {
-  x: number;
-  y: number;
+export interface DetectedFeatures {
+  faceShape: FaceShape;
+  undertone: Undertone;
+  contrastLevel: ContrastLevel;
 }
+
+interface Point { x: number; y: number }
 
 function dist(a: Point, b: Point) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -31,23 +28,17 @@ function dist(a: Point, b: Point) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function detectFaceShape(landmarks: any): FaceShape {
   const pts: Point[] = landmarks.positions;
+  const faceWidth    = dist(pts[0]!, pts[16]!);
+  const jawWidth     = dist(pts[3]!, pts[13]!);
+  const foreheadWidth = dist(pts[17]!, pts[26]!);
+  const browMidY     = ((pts[19]?.y ?? 0) + (pts[24]?.y ?? 0)) / 2;
+  const chinY        = pts[8]!.y;
+  const faceHeight   = Math.abs(chinY - browMidY) * 1.5;
 
-  // Jaw contour: 0–16 (0=right ear, 8=chin, 16=left ear)
-  const faceWidth = dist(pts[0]!, pts[16]!);          // full jaw width
-  const jawWidth = dist(pts[3]!, pts[13]!);            // narrower chin width
-  const foreheadWidth = dist(pts[17]!, pts[26]!);      // outer brow span as forehead proxy
-
-  // Face height: chin (8) to estimated forehead
-  const browMidY = ((pts[19]?.y ?? 0) + (pts[24]?.y ?? 0)) / 2;
-  const chinY = pts[8]!.y;
-  const browToChin = Math.abs(chinY - browMidY);
-  const faceHeight = browToChin * 1.5; // include forehead above brows
-
-  if (faceWidth === 0) return "oval"; // guard
-
-  const hwRatio = faceHeight / faceWidth;
-  const jawRatio = jawWidth / faceWidth;
-  const foreheadRatio = foreheadWidth / faceWidth;
+  if (faceWidth === 0) return "oval";
+  const hwRatio        = faceHeight / faceWidth;
+  const jawRatio       = jawWidth / faceWidth;
+  const foreheadRatio  = foreheadWidth / faceWidth;
 
   if (hwRatio > 1.65) return "oblong";
   if (hwRatio < 1.10) return "round";
@@ -58,8 +49,62 @@ function detectFaceShape(landmarks: any): FaceShape {
   return "oval";
 }
 
+function avgRGB(data: ImageData): { r: number; g: number; b: number } {
+  let r = 0, g = 0, b = 0, count = 0;
+  for (let i = 0; i < data.data.length; i += 4) {
+    // Skip very dark pixels (shadows/hair mixed in) and very bright (blown highlights)
+    const lum = 0.299 * data.data[i]! + 0.587 * data.data[i + 1]! + 0.114 * data.data[i + 2]!;
+    if (lum < 30 || lum > 230) continue;
+    r += data.data[i]!;
+    g += data.data[i + 1]!;
+    b += data.data[i + 2]!;
+    count++;
+  }
+  if (count === 0) return { r: 128, g: 128, b: 128 };
+  return { r: r / count, g: g / count, b: b / count };
+}
+
+function analyzeAppearance(
+  canvas: HTMLCanvasElement,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  box: any,
+): { undertone: Undertone; contrastLevel: ContrastLevel } {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return { undertone: "neutral", contrastLevel: "medium" };
+
+  const { x, y, width, height } = box as { x: number; y: number; width: number; height: number };
+
+  // Skin: centre of face (nose/cheek area, avoiding hairline & jaw edges)
+  const skinX = Math.max(0, x + width * 0.25);
+  const skinY = Math.max(0, y + height * 0.25);
+  const skinW = Math.min(canvas.width - skinX, width * 0.5);
+  const skinH = Math.min(canvas.height - skinY, height * 0.4);
+  const skinData = ctx.getImageData(skinX, skinY, skinW, skinH);
+  const skin = avgRGB(skinData);
+
+  // Hair: region above the face bounding box
+  const hairY = Math.max(0, y - height * 0.35);
+  const hairH = Math.min(y - hairY, height * 0.3);
+  const hairX = Math.max(0, x + width * 0.15);
+  const hairW = Math.min(canvas.width - hairX, width * 0.7);
+  const hairData = hairH > 4 ? ctx.getImageData(hairX, hairY, hairW, hairH) : skinData;
+  const hair = avgRGB(hairData);
+
+  // Undertone: warm skin has more red than blue; cool has more blue
+  const warmBias = skin.r - skin.b;
+  const undertone: Undertone = warmBias > 18 ? "warm" : warmBias < -8 ? "cool" : "neutral";
+
+  // Contrast: luminance difference between skin and hair
+  const skinLum = 0.299 * skin.r + 0.587 * skin.g + 0.114 * skin.b;
+  const hairLum = 0.299 * hair.r + 0.587 * hair.g + 0.114 * hair.b;
+  const diff = Math.abs(skinLum - hairLum);
+  const contrastLevel: ContrastLevel = diff > 85 ? "high" : diff > 40 ? "medium" : "low";
+
+  return { undertone, contrastLevel };
+}
+
 interface Props {
-  onDetected: (shape: FaceShape) => void;
+  onDetected: (features: DetectedFeatures) => void;
   onClose: () => void;
 }
 
@@ -72,15 +117,26 @@ type Status =
   | "no-face"
   | "error";
 
+const SHAPE_LABELS: Record<FaceShape, string> = {
+  oval: "Oval", round: "Round", square: "Square", heart: "Heart",
+  diamond: "Diamond", oblong: "Oblong", triangle: "Triangle",
+};
+const UNDERTONE_LABELS: Record<Undertone, string> = {
+  warm: "Warm", neutral: "Neutral", cool: "Cool",
+};
+const CONTRAST_LABELS: Record<ContrastLevel, string> = {
+  low: "Low", medium: "Medium", high: "High",
+};
+
 export function FaceScanModal({ onDetected, onClose }: Props) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const videoRef  = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const faceApiRef = useRef<FaceApiModule | null>(null);
 
-  const [status, setStatus] = useState<Status>("loading-models");
+  const [status, setStatus]     = useState<Status>("loading-models");
   const [statusMsg, setStatusMsg] = useState("Loading AI models…");
-  const [detected, setDetected] = useState<FaceShape | null>(null);
+  const [detected, setDetected] = useState<DetectedFeatures | null>(null);
 
   // Load models once
   useEffect(() => {
@@ -107,7 +163,7 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
     return () => { cancelled = true; };
   }, []);
 
-  // Start camera once models are loaded
+  // Start camera
   useEffect(() => {
     if (status !== "requesting-camera") return;
     let cancelled = false;
@@ -139,25 +195,24 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
   }, [status]);
 
   const capture = useCallback(async () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
+    const video   = videoRef.current;
+    const canvas  = canvasRef.current;
     const faceapi = faceApiRef.current;
     if (!video || !canvas || !faceapi) return;
 
     setStatus("capturing");
     setStatusMsg("Analysing face…");
 
-    // Draw current frame to canvas
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    canvas.width = video.videoWidth;
+    canvas.width  = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
     try {
       const result = await faceapi
         .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }))
-        .withFaceLandmarks(true); // true = tiny net
+        .withFaceLandmarks(true);
 
       if (!result) {
         setStatus("no-face");
@@ -165,12 +220,12 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
         return;
       }
 
-      const shape = detectFaceShape(result.landmarks);
-      setDetected(shape);
-      setStatus("detected");
-      setStatusMsg("");
+      const faceShape   = detectFaceShape(result.landmarks);
+      const { undertone, contrastLevel } = analyzeAppearance(canvas, result.detection.box);
 
-      // Stop camera once we have a result
+      const features: DetectedFeatures = { faceShape, undertone, contrastLevel };
+      setDetected(features);
+      setStatus("detected");
       streamRef.current?.getTracks().forEach((t) => t.stop());
     } catch {
       setStatus("error");
@@ -184,43 +239,28 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
     setStatusMsg("Restarting camera…");
   };
 
-  const confirm = () => {
-    if (detected) onDetected(detected);
-  };
-
-  const SHAPE_LABELS: Record<FaceShape, string> = {
-    oval: "Oval",
-    round: "Round",
-    square: "Square",
-    heart: "Heart",
-    diamond: "Diamond",
-    oblong: "Oblong",
-    triangle: "Triangle",
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
       <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
-            <p className="text-sm font-semibold text-gray-900">Face Shape Scan</p>
-            <p className="text-xs text-gray-400 mt-0.5">Processed on-device · not stored</p>
+            <p className="text-sm font-semibold text-gray-900">Face Scan</p>
+            <p className="text-xs text-gray-400 mt-0.5">Detects shape · undertone · contrast · processed on-device</p>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
             <XCircle className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
-        {/* Video / Canvas area */}
+        {/* Video area */}
         <div className="relative bg-black aspect-[4/3] overflow-hidden">
           <video
             ref={videoRef}
             playsInline
             muted
-            className={`absolute inset-0 w-full h-full object-cover scale-x-[-1] ${status === "detected" ? "opacity-30" : "opacity-100"}`}
+            className={`absolute inset-0 w-full h-full object-cover scale-x-[-1] ${status === "detected" ? "opacity-25" : "opacity-100"}`}
           />
-          {/* Hidden canvas used for capture + analysis */}
           <canvas ref={canvasRef} className="hidden" />
 
           {/* Face guide oval */}
@@ -230,7 +270,7 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
             </div>
           )}
 
-          {/* Status overlay */}
+          {/* Loading / capturing spinner */}
           {(status === "loading-models" || status === "requesting-camera" || status === "capturing") && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50">
               <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
@@ -238,25 +278,31 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
             </div>
           )}
 
-          {/* Detected result overlay */}
+          {/* Results overlay */}
           {status === "detected" && detected && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-              <div className="bg-white rounded-xl px-6 py-4 text-center shadow-lg">
-                <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Detected shape</p>
-                <p className="text-3xl font-semibold text-gray-900">{SHAPE_LABELS[detected]}</p>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-white rounded-xl px-5 py-4 shadow-xl text-center space-y-3 w-56">
+                <p className="text-xs text-gray-400 uppercase tracking-wider">Detected</p>
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  <div>
+                    <p className="text-base font-semibold text-gray-900">{SHAPE_LABELS[detected.faceShape]}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Shape</p>
+                  </div>
+                  <div>
+                    <p className="text-base font-semibold text-gray-900">{UNDERTONE_LABELS[detected.undertone]}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Undertone</p>
+                  </div>
+                  <div>
+                    <p className="text-base font-semibold text-gray-900">{CONTRAST_LABELS[detected.contrastLevel]}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Contrast</p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* No-face error */}
-          {status === "no-face" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 px-6">
-              <p className="text-sm text-white text-center">{statusMsg}</p>
-            </div>
-          )}
-
-          {/* Generic error */}
-          {status === "error" && (
+          {/* Error / no-face */}
+          {(status === "no-face" || status === "error") && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/60 px-6">
               <p className="text-sm text-white text-center">{statusMsg}</p>
             </div>
@@ -285,7 +331,7 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
             </button>
           )}
 
-          {status === "detected" && (
+          {status === "detected" && detected && (
             <>
               <button
                 onClick={retry}
@@ -295,11 +341,11 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
                 Retry
               </button>
               <button
-                onClick={confirm}
+                onClick={() => onDetected(detected)}
                 className="flex-1 flex items-center justify-center gap-2 bg-brand text-white py-2.5 rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors"
               >
                 <Check className="w-4 h-4" />
-                Use {SHAPE_LABELS[detected!]}
+                Apply All
               </button>
             </>
           )}
