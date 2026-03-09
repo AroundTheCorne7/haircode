@@ -91,7 +91,7 @@ export default function SettingsPage() {
       setPasswordError("");
     }
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
     const token = typeof window !== "undefined" ? localStorage.getItem("hc_token") : null;
     const headers: Record<string, string> = {
       "Content-Type": "application/json",

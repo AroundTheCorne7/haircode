@@ -219,7 +219,7 @@ export function Step6Protocol({ data, onBack }: Props) {
   const handleSave = async () => {
     if (!protocol) return;
     const token = typeof window !== "undefined" ? localStorage.getItem("hc_token") : null;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
 
     if (!data.clientId) {
       // No clientId available — navigate to dashboard without saving to backend
