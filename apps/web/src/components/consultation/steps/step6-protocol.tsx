@@ -220,22 +220,37 @@ export function Step6Protocol({ data, onBack }: Props) {
     if (!protocol) return;
     const token = typeof window !== "undefined" ? localStorage.getItem("hc_token") : null;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
-
-    if (!data.clientId) {
-      // No clientId available — navigate to dashboard without saving to backend
-      // TODO: create client record first before saving protocol
-      window.location.href = "/dashboard";
-      return;
-    }
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
 
     setSaving(true);
     try {
-      const res = await fetch(`${apiUrl}/api/v1/clients/${data.clientId}/protocols/generate`, {
+      let clientId = data.clientId;
+
+      if (!clientId) {
+        // Create a new client record from the name entered in step 1
+        const createRes = await fetch(`${apiUrl}/api/v1/clients`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            firstName: data.firstName ?? "Unknown",
+            lastName: data.lastName ?? "Client",
+            gdprConsentGiven: true,
+          }),
+        });
+        if (!createRes.ok) {
+          const body = await createRes.json() as { error?: { message?: string } };
+          throw new Error(body.error?.message ?? "Failed to create client");
+        }
+        const created = await createRes.json() as { data: { id: string } };
+        clientId = created.data.id;
+      }
+
+      const res = await fetch(`${apiUrl}/api/v1/clients/${clientId}/protocols/generate`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         body: JSON.stringify({
           hair: data.hair,
           scalp: data.scalp,
