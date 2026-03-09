@@ -141,6 +141,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.56.0
         version: 5.90.21(react@19.2.4)
+      '@vladmandic/face-api':
+        specifier: ^1.7.15
+        version: 1.7.15
       class-variance-authority:
         specifier: ^0.7.0
         version: 0.7.1
@@ -2025,6 +2028,10 @@ packages:
 
   '@vitest/utils@2.1.9':
     resolution: {integrity: sha512-v0psaMSkNJ3A2NMrUEHFRzJtDPFn+/VWZ5WxImB21T9fjucJRmS7xCS3ppEnARb9y11OAzaD+P2Ps+b+BGX5iQ==}
+
+  '@vladmandic/face-api@1.7.15':
+    resolution: {integrity: sha512-WDMmK3CfNLo8jylWqMoQgf4nIst3M0fzx1dnac96wv/dvMTN4DxC/Pq1DGtduDk1lktCamQ3MIDXFnvrdHTXDw==}
+    engines: {node: '>=14.0.0'}
 
   abstract-logging@2.0.1:
     resolution: {integrity: sha512-2BjRTZxTPvheOvGbBslFSYOUkr+SjPtOnrLP33f+VIWLzezQpZcqVg7ja3L4dBXmzzgwT+a029jRx5PCi3JuiA==}
@@ -5575,6 +5582,8 @@ snapshots:
       '@vitest/pretty-format': 2.1.9
       loupe: 3.2.1
       tinyrainbow: 1.2.0
+
+  '@vladmandic/face-api@1.7.15': {}
 
   abstract-logging@2.0.1: {}
 
