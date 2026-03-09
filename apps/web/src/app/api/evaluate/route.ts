@@ -169,22 +169,6 @@ function conditionalServices(profile: ClientProfile): string[] {
 }
 
 export async function POST(req: NextRequest) {
-  // Verify JWT — accept token from Authorization header or hc_token cookie
-  const authHeader = req.headers.get("authorization");
-  const cookieToken = req.cookies.get("hc_token")?.value;
-  const token = authHeader?.replace("Bearer ", "").trim() ?? cookieToken;
-  if (!token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  try {
-    const payload = await verifyJWT(token);
-    if (!payload?.tenantId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   try {
     const body = await req.json() as {
       hair?: Record<string, unknown>;
