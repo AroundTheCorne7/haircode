@@ -1,14 +1,35 @@
-import { pgTable, uuid, varchar, timestamp, text, smallint, numeric, boolean, date } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  uuid,
+  varchar,
+  timestamp,
+  text,
+  smallint,
+  numeric,
+  boolean,
+  date,
+} from "drizzle-orm/pg-core";
 import { clients } from "./clients.js";
 import { users } from "./users.js";
 import { tenants } from "./tenants.js";
 
 export const hairProfiles = pgTable("hair_profiles", {
   id: uuid("id").defaultRandom().primaryKey(),
-  tenantId: uuid("tenant_id").notNull().references(() => tenants.id),
-  clientId: uuid("client_id").notNull().references(() => clients.id),
-  assessedBy: uuid("assessed_by").notNull().references(() => users.id),
+  tenantId: uuid("tenant_id")
+    .notNull()
+    .references(() => tenants.id),
+  clientId: uuid("client_id")
+    .notNull()
+    .references(() => clients.id),
+  assessedBy: uuid("assessed_by")
+    .notNull()
+    .references(() => users.id),
   assessmentDate: date("assessment_date").notNull(),
+  // Hair type (broad classification) — straight | wavy | curly
+  hairType: varchar("hair_type", { length: 20 }),
+  // Strand thickness — fine | medium | coarse
+  thickness: varchar("thickness", { length: 20 }),
+  // Detailed texture — straight | wavy | curly | coily | kinky
   texture: varchar("texture", { length: 30 }),
   density: varchar("density", { length: 20 }),
   strandDiameter: varchar("strand_diameter", { length: 20 }),
@@ -19,8 +40,12 @@ export const hairProfiles = pgTable("hair_profiles", {
   lengthCm: numeric("length_cm", { precision: 5, scale: 1 }),
   isCurrent: boolean("is_current").notNull().default(true),
   notes: text("notes"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export type HairProfile = typeof hairProfiles.$inferSelect;

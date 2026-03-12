@@ -3,11 +3,12 @@ import { computeModuleScores, computeCompositeScore } from "./scorer.js";
 import { evaluateRedFlags } from "./red-flag.js";
 import { evaluateRules } from "./rule-evaluator.js";
 import { assignPhase, generatePhases } from "./phase-generator.js";
+import { runDesignEngine } from "./design-engine.js";
 export * from "./types.js";
 export { DEFAULT_RULES } from "./default-rules.js";
 export { DEFAULT_WEIGHTS } from "./weights.js";
 export async function evaluate(input) {
-    const { profile, rules = [], weights, normalizers = [], redFlagRules = [], includeTrace } = input;
+    const { profile, rules = [], weights, normalizers = [], redFlagRules = [], includeTrace, } = input;
     // Step 1: Compute module scores
     const moduleScores = computeModuleScores(profile, normalizers, weights);
     // Step 2: Compute composite score
@@ -24,7 +25,12 @@ export async function evaluate(input) {
             redFlags: flags,
             appliedActions: [],
             // Spec §5.9 Scenario A: frequency is {interval:0, unit:"weeks"} when blocked
-            protocol: { phases: [], services: [], checkpoints: [], frequency: { interval: 0, unit: "weeks" } },
+            protocol: {
+                phases: [],
+                services: [],
+                checkpoints: [],
+                frequency: { interval: 0, unit: "weeks" },
+            },
         };
     }
     // Step 4: Apply red flag penalty
@@ -71,6 +77,8 @@ export async function evaluate(input) {
     const frequency = frequencyAction?.value
         ? frequencyAction.value
         : { interval: 14, unit: "days" };
+    // Step 10: Run Design Engine (6-layer methodology → TransformationBlueprint)
+    const blueprintResult = runDesignEngine(profile, assignedPhase, adjustedScore, flags);
     const result = {
         evaluationId: randomUUID(),
         compositeScore,
@@ -80,6 +88,7 @@ export async function evaluate(input) {
         redFlags: flags,
         appliedActions: ruleResult.appliedActions,
         protocol: { phases, services, checkpoints, frequency },
+        ...(blueprintResult != null ? { blueprint: blueprintResult } : {}),
     };
     if (includeTrace) {
         result.trace = {

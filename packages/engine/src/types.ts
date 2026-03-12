@@ -2,10 +2,19 @@ export type ModuleType = "hair" | "scalp" | "body" | "morphology";
 export type PhaseType = "stabilization" | "transformation" | "integration";
 export type RedFlagSeverity = "INFO" | "WARNING" | "CRITICAL" | "BLOCK";
 export type Operator =
-  | "EQUALS" | "NOT_EQUALS" | "GREATER_THAN" | "LESS_THAN"
-  | "GREATER_THAN_OR_EQUAL" | "LESS_THAN_OR_EQUAL"
-  | "BETWEEN" | "CONTAINS" | "NOT_CONTAINS" | "IN" | "NOT_IN"
-  | "IS_NULL" | "IS_NOT_NULL";
+  | "EQUALS"
+  | "NOT_EQUALS"
+  | "GREATER_THAN"
+  | "LESS_THAN"
+  | "GREATER_THAN_OR_EQUAL"
+  | "LESS_THAN_OR_EQUAL"
+  | "BETWEEN"
+  | "CONTAINS"
+  | "NOT_CONTAINS"
+  | "IN"
+  | "NOT_IN"
+  | "IS_NULL"
+  | "IS_NOT_NULL";
 
 export interface FieldNormalizer {
   fieldPath: string;
@@ -35,8 +44,14 @@ export interface ConditionNode {
 
 export interface RuleAction {
   type:
-    | "SET_PHASE" | "ADJUST_SCORE" | "ADD_SERVICE" | "REMOVE_SERVICE"
-    | "SET_FREQUENCY" | "TRIGGER_ALERT" | "SET_CHECKPOINT" | "BLOCK_PROTOCOL";
+    | "SET_PHASE"
+    | "ADJUST_SCORE"
+    | "ADD_SERVICE"
+    | "REMOVE_SERVICE"
+    | "SET_FREQUENCY"
+    | "TRIGGER_ALERT"
+    | "SET_CHECKPOINT"
+    | "BLOCK_PROTOCOL";
   target?: string;
   value?: unknown;
   modifier?: "SET" | "ADD" | "MULTIPLY";
@@ -68,6 +83,10 @@ export interface ClientProfile {
   scalp?: Record<string, unknown>;
   body?: Record<string, unknown>;
   morphology?: Record<string, unknown>;
+  /** Layer 4 — Color Identity (season, contrastScore, undertone, naturalHairColor) */
+  color?: Record<string, unknown>;
+  /** Layer 5 — Archetype Identity (primary, primaryWeight, secondary?, secondaryWeight?) */
+  archetype?: Record<string, unknown>;
 }
 
 export interface EvaluationInput {
@@ -95,7 +114,99 @@ export interface EvaluationResult {
   redFlags: RedFlag[];
   appliedActions: RuleAction[];
   protocol: ProtocolOutput;
+  /** Design Engine output — present when color + archetype layers are provided */
+  blueprint?: TransformationBlueprintOutput;
   trace?: EvaluationTrace;
+}
+
+// ─── Design Engine Types ──────────────────────────────────────────────────────
+
+export type ColorSeason = "spring" | "summer" | "autumn" | "winter";
+export type ContrastScore = 1 | 2 | 3 | 4 | 5;
+export type ArchetypeType =
+  | "natural"
+  | "elegant"
+  | "dramatic"
+  | "classic"
+  | "creative"
+  | "sensual";
+export type FaceShapeType =
+  | "oval"
+  | "round"
+  | "square"
+  | "heart"
+  | "diamond"
+  | "rectangular";
+export type BodyType =
+  | "hourglass"
+  | "rectangle"
+  | "triangle"
+  | "inverted_triangle";
+
+/** Hair Design decision produced by the Face Morphology + Body rules */
+export interface HairDesign {
+  recommendedLengths: string[];
+  recommendedShapes: string[];
+  forbiddenLengths: string[];
+  forbiddenShapes: string[];
+  volumeGuidelines: string[];
+  rationale: string;
+}
+
+/** Color strategy produced by the Color Identity rules */
+export interface ColorStrategy {
+  season: ColorSeason;
+  contrastScore: ContrastScore;
+  recommendedTechniques: string[];
+  avoidTechniques: string[];
+  recommendedTones: string[];
+  avoidTones: string[];
+  contraindications: string[];
+}
+
+export interface RoadmapPhase {
+  name: string;
+  durationWeeks: number;
+  services: string[];
+  checkpoints: string[];
+}
+
+export interface TechnicalRoadmap {
+  phases: RoadmapPhase[];
+  totalDurationWeeks: number;
+  visitFrequencyWeeks: number;
+}
+
+export interface TreatmentProtocol {
+  homecare: string[];
+  inSalon: string[];
+  contraindications: string[];
+}
+
+/** Archetype blend — primary + optional secondary with weights summing to 100 */
+export interface ArchetypeBlend {
+  primary: ArchetypeType;
+  primaryWeight: number;
+  secondary?: ArchetypeType;
+  secondaryWeight?: number;
+}
+
+/** A cross-layer conflict record produced by the resolver */
+export interface ConflictRecord {
+  field: string;
+  winningLayer: string;
+  losingLayer: string;
+  resolution: string;
+}
+
+/** Full Transformation Blueprint — the rich output of the 6-layer engine */
+export interface TransformationBlueprintOutput {
+  hairDesign: HairDesign;
+  colorStrategy: ColorStrategy;
+  technicalRoadmap: TechnicalRoadmap;
+  treatmentProtocol: TreatmentProtocol;
+  archetypeBlend: ArchetypeBlend;
+  conflictResolution: ConflictRecord[];
 }
 
 export interface ProtocolOutput {

@@ -5,5 +5,8 @@ export * from "./hair.js";
 export * from "./scalp.js";
 export * from "./body.js";
 export * from "./morphology.js";
+export * from "./colorProfiles.js";
+export * from "./archetypeProfiles.js";
+export * from "./transformationBlueprints.js";
 export * from "./engine.js";
 export * from "./protocols.js";

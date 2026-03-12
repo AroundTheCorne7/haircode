@@ -4,13 +4,23 @@ import { computeModuleScores, computeCompositeScore } from "./scorer.js";
 import { evaluateRedFlags } from "./red-flag.js";
 import { evaluateRules } from "./rule-evaluator.js";
 import { assignPhase, generatePhases } from "./phase-generator.js";
+import { runDesignEngine } from "./design-engine.js";
 
 export * from "./types.js";
 export { DEFAULT_RULES } from "./default-rules.js";
 export { DEFAULT_WEIGHTS } from "./weights.js";
 
-export async function evaluate(input: EvaluationInput): Promise<EvaluationResult> {
-  const { profile, rules = [], weights, normalizers = [], redFlagRules = [], includeTrace } = input;
+export async function evaluate(
+  input: EvaluationInput,
+): Promise<EvaluationResult> {
+  const {
+    profile,
+    rules = [],
+    weights,
+    normalizers = [],
+    redFlagRules = [],
+    includeTrace,
+  } = input;
 
   // Step 1: Compute module scores
   const moduleScores = computeModuleScores(profile, normalizers, weights);
@@ -19,7 +29,10 @@ export async function evaluate(input: EvaluationInput): Promise<EvaluationResult
   const compositeScore = computeCompositeScore(moduleScores, weights.modules);
 
   // Step 3: Evaluate red flags
-  const { flags, totalPenalty, blocked } = evaluateRedFlags(profile, redFlagRules);
+  const { flags, totalPenalty, blocked } = evaluateRedFlags(
+    profile,
+    redFlagRules,
+  );
 
   if (blocked) {
     return {
@@ -31,7 +44,12 @@ export async function evaluate(input: EvaluationInput): Promise<EvaluationResult
       redFlags: flags,
       appliedActions: [],
       // Spec §5.9 Scenario A: frequency is {interval:0, unit:"weeks"} when blocked
-      protocol: { phases: [], services: [], checkpoints: [], frequency: { interval: 0, unit: "weeks" as const } },
+      protocol: {
+        phases: [],
+        services: [],
+        checkpoints: [],
+        frequency: { interval: 0, unit: "weeks" as const },
+      },
     };
   }
 
@@ -63,13 +81,19 @@ export async function evaluate(input: EvaluationInput): Promise<EvaluationResult
   }
 
   // Step 6: Determine phase (from rules or score)
-  const phaseAction = ruleResult.appliedActions.find((a) => a.type === "SET_PHASE");
+  const phaseAction = ruleResult.appliedActions.find(
+    (a) => a.type === "SET_PHASE",
+  );
   const assignedPhase: PhaseType = phaseAction?.value
     ? (phaseAction.value as PhaseType)
     : assignPhase(adjustedScore, flags);
 
   // Step 7: Generate phases and checkpoints
-  const { phases, checkpoints } = generatePhases(assignedPhase, adjustedScore, flags);
+  const { phases, checkpoints } = generatePhases(
+    assignedPhase,
+    adjustedScore,
+    flags,
+  );
 
   // Step 8: Extract services from rule actions
   const services = ruleResult.appliedActions
@@ -82,10 +106,20 @@ export async function evaluate(input: EvaluationInput): Promise<EvaluationResult
     }));
 
   // Step 9: Determine frequency
-  const frequencyAction = ruleResult.appliedActions.find((a) => a.type === "SET_FREQUENCY");
+  const frequencyAction = ruleResult.appliedActions.find(
+    (a) => a.type === "SET_FREQUENCY",
+  );
   const frequency = frequencyAction?.value
     ? (frequencyAction.value as { interval: number; unit: "days" | "weeks" })
     : { interval: 14, unit: "days" as const };
+
+  // Step 10: Run Design Engine (6-layer methodology → TransformationBlueprint)
+  const blueprintResult = runDesignEngine(
+    profile,
+    assignedPhase,
+    adjustedScore,
+    flags,
+  );
 
   const result: EvaluationResult = {
     evaluationId: randomUUID(),
@@ -96,6 +130,7 @@ export async function evaluate(input: EvaluationInput): Promise<EvaluationResult
     redFlags: flags,
     appliedActions: ruleResult.appliedActions,
     protocol: { phases, services, checkpoints, frequency },
+    ...(blueprintResult != null ? { blueprint: blueprintResult } : {}),
   };
 
   if (includeTrace) {

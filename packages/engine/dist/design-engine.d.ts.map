@@ -1,0 +1,1 @@
+{"version":3,"file":"design-engine.d.ts","sourceRoot":"","sources":["../src/design-engine.ts"],"names":[],"mappings":"AAAA;;;;;;;;;GASG;AAEH,OAAO,KAAK,EACV,aAAa,EACb,SAAS,EACT,OAAO,EACP,6BAA6B,EAO9B,MAAM,YAAY,CAAC;AAgBpB;;;;GAIG;AACH,wBAAgB,eAAe,CAC7B,OAAO,EAAE,aAAa,EACtB,aAAa,EAAE,SAAS,EACxB,aAAa,EAAE,MAAM,EACrB,QAAQ,EAAE,OAAO,EAAE,GAClB,6BAA6B,GAAG,IAAI,CAsFtC"}

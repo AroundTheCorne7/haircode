@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { evaluate, DEFAULT_RULES, DEFAULT_WEIGHTS } from "@haircode/engine";
-import type { FieldNormalizer, RedFlag, ClientProfile, PhaseType } from "@haircode/engine";
+import type {
+  FieldNormalizer,
+  RedFlag,
+  ClientProfile,
+  PhaseType,
+} from "@haircode/engine";
 import { verifyJWT } from "@/lib/auth";
 
 /** Normalizers that map consultation form values → 0-100 engine scores */
@@ -9,7 +14,10 @@ const NORMALIZERS: FieldNormalizer[] = [
   {
     fieldPath: "hair.damageIndex",
     type: "INVERTED_LINEAR",
-    inputMin: 0, inputMax: 10, outputMin: 0, outputMax: 100,
+    inputMin: 0,
+    inputMax: 10,
+    outputMin: 0,
+    outputMax: 100,
   },
   {
     fieldPath: "hair.texture",
@@ -29,7 +37,10 @@ const NORMALIZERS: FieldNormalizer[] = [
   {
     fieldPath: "hair.density",
     type: "RANGE_SCALE",
-    inputMin: 1, inputMax: 5, outputMin: 30, outputMax: 90,
+    inputMin: 1,
+    inputMax: 5,
+    outputMin: 30,
+    outputMax: 90,
   },
 
   // ── SCALP ─────────────────────────────────────────────────────────────────
@@ -47,25 +58,37 @@ const NORMALIZERS: FieldNormalizer[] = [
   {
     fieldPath: "scalp.sensitivityLevel",
     type: "INVERTED_LINEAR",
-    inputMin: 1, inputMax: 5, outputMin: 10, outputMax: 90,
+    inputMin: 1,
+    inputMax: 5,
+    outputMin: 10,
+    outputMax: 90,
   },
   {
     fieldPath: "scalp.phLevel",
     // Optimal pH ~4.5–5.5. Higher is worse.
     type: "INVERTED_LINEAR",
-    inputMin: 3.5, inputMax: 7.5, outputMin: 10, outputMax: 90,
+    inputMin: 3.5,
+    inputMax: 7.5,
+    outputMin: 10,
+    outputMax: 90,
   },
 
   // ── BODY ──────────────────────────────────────────────────────────────────
   {
     fieldPath: "body.sleepQualityScore",
     type: "RANGE_SCALE",
-    inputMin: 1, inputMax: 10, outputMin: 5, outputMax: 100,
+    inputMin: 1,
+    inputMax: 10,
+    outputMin: 5,
+    outputMax: 100,
   },
   {
     fieldPath: "body.stressIndex",
     type: "INVERTED_LINEAR",
-    inputMin: 1, inputMax: 10, outputMin: 5, outputMax: 100,
+    inputMin: 1,
+    inputMax: 10,
+    outputMin: 5,
+    outputMax: 100,
   },
   {
     fieldPath: "body.activityLevel",
@@ -82,12 +105,23 @@ const NORMALIZERS: FieldNormalizer[] = [
   {
     fieldPath: "morphology.symmetryScore",
     type: "RANGE_SCALE",
-    inputMin: 0, inputMax: 100, outputMin: 0, outputMax: 100,
+    inputMin: 0,
+    inputMax: 100,
+    outputMin: 0,
+    outputMax: 100,
   },
   {
     fieldPath: "morphology.faceShape",
     type: "ENUM_MAP",
-    map: { oval: 90, heart: 80, diamond: 78, round: 68, square: 68, oblong: 62, triangle: 62 },
+    map: {
+      oval: 90,
+      heart: 80,
+      diamond: 78,
+      round: 68,
+      square: 68,
+      oblong: 62,
+      triangle: 62,
+    },
   },
   {
     fieldPath: "morphology.undertone",
@@ -100,22 +134,25 @@ const RED_FLAG_RULES: RedFlag[] = [
   {
     code: "RF_SCALP_007",
     severity: "BLOCK",
-    message: "Open scalp lesions detected — all chemical services are contraindicated until healed.",
+    message:
+      "Open scalp lesions detected — all chemical services are contraindicated until healed.",
     penaltyFactor: 1.0,
     requiresAcknowledgment: true,
   },
   {
     code: "RF_SCALP_006",
     severity: "CRITICAL",
-    message: "Seborrheic condition with elevated pH — rebalancing protocol required before transformation work.",
+    message:
+      "Seborrheic condition with elevated pH — rebalancing protocol required before transformation work.",
     penaltyFactor: 0.25,
     requiresAcknowledgment: true,
   },
   {
     code: "RF_HAIR_001",
     severity: "CRITICAL",
-    message: "Severe structural damage (damage index 10/10) — emergency repair protocol initiated.",
-    penaltyFactor: 0.30,
+    message:
+      "Severe structural damage (damage index 10/10) — emergency repair protocol initiated.",
+    penaltyFactor: 0.3,
     requiresAcknowledgment: false,
   },
 ];
@@ -151,17 +188,28 @@ function conditionalServices(profile: ClientProfile): string[] {
 
   const damageIndex = Number(hair["damageIndex"] ?? 0);
   const porosity = String(hair["porosity"] ?? "");
-  const conditions = Array.isArray(scalp["conditions"]) ? (scalp["conditions"] as string[]) : [];
+  const conditions = Array.isArray(scalp["conditions"])
+    ? (scalp["conditions"] as string[])
+    : [];
   const stressIndex = Number(body["stressIndex"] ?? 0);
-  const chemHistory = Array.isArray(hair["chemicalHistory"]) ? (hair["chemicalHistory"] as string[]) : [];
+  const chemHistory = Array.isArray(hair["chemicalHistory"])
+    ? (hair["chemicalHistory"] as string[])
+    : [];
 
-  if (damageIndex >= 7) extras.push("Keratin Reconstruction Booster — sessions 2 & 4");
-  if (porosity === "high" || porosity === "highly_damaged") extras.push("Porosity Sealing Treatment — every session");
-  if (conditions.includes("seborrheic")) extras.push("Anti-Seborrheic Scalp Treatment — every 10 days");
-  if (conditions.includes("dandruff")) extras.push("Anti-Dandruff Therapy — every session");
-  if (conditions.includes("alopecia")) extras.push("Trichology Stimulation Protocol — every session");
+  if (damageIndex >= 7)
+    extras.push("Keratin Reconstruction Booster — sessions 2 & 4");
+  if (porosity === "high" || porosity === "highly_damaged")
+    extras.push("Porosity Sealing Treatment — every session");
+  if (conditions.includes("seborrheic"))
+    extras.push("Anti-Seborrheic Scalp Treatment — every 10 days");
+  if (conditions.includes("dandruff"))
+    extras.push("Anti-Dandruff Therapy — every session");
+  if (conditions.includes("alopecia"))
+    extras.push("Trichology Stimulation Protocol — every session");
   if (stressIndex >= 7) extras.push("Stress-Recovery Scalp Ritual — monthly");
-  if (chemHistory.some((h) => h.includes("bleach") || h.includes("lightening"))) {
+  if (
+    chemHistory.some((h) => h.includes("bleach") || h.includes("lightening"))
+  ) {
     extras.push("Bleach-Recovery Bond Building Treatment — every session");
   }
 
@@ -170,11 +218,13 @@ function conditionalServices(profile: ClientProfile): string[] {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json() as {
+    const body = (await req.json()) as {
       hair?: Record<string, unknown>;
       scalp?: Record<string, unknown>;
       body?: Record<string, unknown>;
       morphology?: Record<string, unknown>;
+      color?: Record<string, unknown>;
+      archetype?: Record<string, unknown>;
     };
 
     // Normalise scalp.openLesions from conditions array
@@ -186,8 +236,18 @@ export async function POST(req: NextRequest) {
         : [];
 
     const hairProfile: Record<string, unknown> = body.hair
-      ? { ...body.hair, damageIndex: Number(body.hair.damageIndex ?? 0), density: Number(body.hair.density ?? 3) }
-      : { damageIndex: 3, density: 3, texture: "straight", porosity: "medium", elasticity: "good" };
+      ? {
+          ...body.hair,
+          damageIndex: Number(body.hair.damageIndex ?? 0),
+          density: Number(body.hair.density ?? 3),
+        }
+      : {
+          damageIndex: 3,
+          density: 3,
+          texture: "straight",
+          porosity: "medium",
+          elasticity: "good",
+        };
 
     const scalpProfile: Record<string, unknown> = body.scalp
       ? {
@@ -195,21 +255,40 @@ export async function POST(req: NextRequest) {
           conditions: conditionsArr,
           openLesions: conditionsArr.includes("open_lesions"),
           // phLevel and sensitivityLevel use INVERTED_LINEAR → must be numbers
-          ...(body.scalp.phLevel != null ? { phLevel: Number(body.scalp.phLevel) } : {}),
+          ...(body.scalp.phLevel != null
+            ? { phLevel: Number(body.scalp.phLevel) }
+            : {}),
           // sebumProduction uses ENUM_MAP with string keys ("1","2","3","4") → keep as string (CRIT-02)
-          ...(body.scalp.sebumProduction != null ? { sebumProduction: String(body.scalp.sebumProduction) } : {}),
-          ...(body.scalp.sensitivityLevel != null ? { sensitivityLevel: Number(body.scalp.sensitivityLevel) } : {}),
+          ...(body.scalp.sebumProduction != null
+            ? { sebumProduction: String(body.scalp.sebumProduction) }
+            : {}),
+          ...(body.scalp.sensitivityLevel != null
+            ? { sensitivityLevel: Number(body.scalp.sensitivityLevel) }
+            : {}),
         }
-      : { biotype: "normal", sebumProduction: "2", sensitivityLevel: 2, conditions: [] };
+      : {
+          biotype: "normal",
+          sebumProduction: "2",
+          sensitivityLevel: 2,
+          conditions: [],
+        };
 
     const bodyProfile: Record<string, unknown> | undefined = body.body
-      ? { ...body.body, sleepQualityScore: Number(body.body.sleepQualityScore ?? 5), stressIndex: Number(body.body.stressIndex ?? 5) }
+      ? {
+          ...body.body,
+          sleepQualityScore: Number(body.body.sleepQualityScore ?? 5),
+          stressIndex: Number(body.body.stressIndex ?? 5),
+        }
       : undefined;
 
     // HIGH-06: Use the actual symmetryScore from submitted data; fall back to 65 only if not provided
-    const morphologyProfile: Record<string, unknown> | undefined = body.morphology
-      ? { ...body.morphology, symmetryScore: body.morphology.symmetryScore ?? 65 }
-      : undefined;
+    const morphologyProfile: Record<string, unknown> | undefined =
+      body.morphology
+        ? {
+            ...body.morphology,
+            symmetryScore: body.morphology.symmetryScore ?? 65,
+          }
+        : undefined;
 
     const profile: ClientProfile = {
       clientId: "consultation",
@@ -217,6 +296,8 @@ export async function POST(req: NextRequest) {
       scalp: scalpProfile,
       ...(bodyProfile != null ? { body: bodyProfile } : {}),
       ...(morphologyProfile != null ? { morphology: morphologyProfile } : {}),
+      ...(body.color != null ? { color: body.color } : {}),
+      ...(body.archetype != null ? { archetype: body.archetype } : {}),
     };
 
     const result = await evaluate({
@@ -236,11 +317,13 @@ export async function POST(req: NextRequest) {
 
     // Build human-readable checkpoints
     const checkpoints = result.protocol.checkpoints.map(
-      (cp) => `Week ${cp.week} — ${cp.criteria.join(", ")}`
+      (cp) => `Week ${cp.week} — ${cp.criteria.join(", ")}`,
     );
 
     return NextResponse.json({
-      phase: result.assignedPhase.charAt(0).toUpperCase() + result.assignedPhase.slice(1),
+      phase:
+        result.assignedPhase.charAt(0).toUpperCase() +
+        result.assignedPhase.slice(1),
       score: Math.round(result.adjustedScore),
       compositeScore: Math.round(result.compositeScore),
       moduleScores: {
@@ -252,10 +335,16 @@ export async function POST(req: NextRequest) {
       redFlags: result.redFlags.map((f) => `${f.code}: ${f.message}`),
       isBlocked: result.redFlags.some((f) => f.severity === "BLOCK"),
       services: allServices,
-      checkpoints: checkpoints.length > 0
-        ? checkpoints
-        : ["Week 3 — Scalp re-assessment", "Week 6 — Full module re-score", "Week 12 — Phase transition evaluation"],
+      checkpoints:
+        checkpoints.length > 0
+          ? checkpoints
+          : [
+              "Week 3 — Scalp re-assessment",
+              "Week 6 — Full module re-score",
+              "Week 12 — Phase transition evaluation",
+            ],
       frequency: result.protocol.frequency,
+      blueprint: result.blueprint ?? undefined,
       trace: result.trace,
     });
   } catch (err) {
