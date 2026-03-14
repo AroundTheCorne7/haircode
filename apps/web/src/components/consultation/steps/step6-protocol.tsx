@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle, Download, XCircle, Activity, ChevronDown } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle,
+  Download,
+  XCircle,
+  Activity,
+  ChevronDown,
+} from "lucide-react";
 import type { ConsultationData } from "../wizard";
 
 interface Props {
@@ -13,7 +20,12 @@ interface ProtocolResult {
   phase: string;
   score: number;
   compositeScore: number;
-  moduleScores: { hair: number; scalp: number; body: number; morphology: number };
+  moduleScores: {
+    hair: number;
+    scalp: number;
+    body: number;
+    morphology: number;
+  };
   redFlags: string[];
   isBlocked: boolean;
   services: string[];
@@ -21,21 +33,27 @@ interface ProtocolResult {
   frequency: { interval: number; unit: string };
 }
 
-const PHASE_DESCRIPTIONS: Record<string, { weeks: string; color: string; description: string }> = {
+const PHASE_DESCRIPTIONS: Record<
+  string,
+  { weeks: string; color: string; description: string }
+> = {
   Stabilization: {
     weeks: "4–12 week programme",
     color: "bg-amber-600",
-    description: "Focused repair and damage control before transformation work begins.",
+    description:
+      "Focused repair and damage control before transformation work begins.",
   },
   Transformation: {
     weeks: "6–16 week programme",
     color: "bg-brand",
-    description: "Active treatment and measurable improvement towards optimal hair health.",
+    description:
+      "Active treatment and measurable improvement towards optimal hair health.",
   },
   Integration: {
     weeks: "8–52 week programme",
     color: "bg-emerald-700",
-    description: "Maintenance and enhancement to sustain and elevate achieved results.",
+    description:
+      "Maintenance and enhancement to sustain and elevate achieved results.",
   },
 };
 
@@ -131,7 +149,9 @@ function ServiceItem({ service }: { service: string }) {
         <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
         <div className="flex-1 min-w-0">
           <span className="text-sm text-gray-800 font-medium">{prefix}</span>
-          {timing && <span className="text-xs text-gray-400 ml-2">· {timing}</span>}
+          {timing && (
+            <span className="text-xs text-gray-400 ml-2">· {timing}</span>
+          )}
         </div>
         {example && (
           <ChevronDown
@@ -141,10 +161,16 @@ function ServiceItem({ service }: { service: string }) {
       </button>
       {example && open && (
         <div className="px-3 pb-3 pt-0 ml-6 space-y-2">
-          <p className="text-xs text-gray-600 leading-relaxed">{example.what}</p>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            {example.what}
+          </p>
           <div className="bg-brand/5 border border-brand/10 rounded p-2">
-            <p className="text-xs text-brand/80 font-medium mb-0.5">How to apply</p>
-            <p className="text-xs text-gray-600 leading-relaxed">{example.how}</p>
+            <p className="text-xs text-brand/80 font-medium mb-0.5">
+              How to apply
+            </p>
+            <p className="text-xs text-gray-600 leading-relaxed">
+              {example.how}
+            </p>
           </div>
         </div>
       )}
@@ -163,7 +189,10 @@ export function Step6Protocol({ data, onBack }: Props) {
       setLoading(true);
       setError(null);
       try {
-        const token = typeof window !== "undefined" ? localStorage.getItem("hc_token") : null;
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("hc_token")
+            : null;
         const res = await fetch("/api/evaluate", {
           method: "POST",
           headers: {
@@ -178,7 +207,7 @@ export function Step6Protocol({ data, onBack }: Props) {
           }),
         });
         if (!res.ok) throw new Error("Evaluation failed");
-        const result = await res.json() as ProtocolResult;
+        const result = (await res.json()) as ProtocolResult;
         setProtocol(result);
       } catch {
         setError("Could not generate protocol. Please try again.");
@@ -194,7 +223,9 @@ export function Step6Protocol({ data, onBack }: Props) {
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <div className="w-12 h-12 border-4 border-brand/20 border-t-brand rounded-full animate-spin" />
         <p className="text-sm text-gray-500">Analysing profile…</p>
-        <p className="text-xs text-gray-400">Running decision engine across all modules</p>
+        <p className="text-xs text-gray-400">
+          Running decision engine across all modules
+        </p>
       </div>
     );
   }
@@ -218,7 +249,8 @@ export function Step6Protocol({ data, onBack }: Props) {
 
   const handleSave = async () => {
     if (!protocol) return;
-    const token = typeof window !== "undefined" ? localStorage.getItem("hc_token") : null;
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem("hc_token") : null;
     const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -231,7 +263,7 @@ export function Step6Protocol({ data, onBack }: Props) {
 
       if (!clientId) {
         // Create a new client record from the name entered in step 1
-        const createRes = await fetch(`${apiUrl}/api/v1/clients`, {
+        const createRes = await fetch(`${apiUrl}/clients`, {
           method: "POST",
           headers,
           body: JSON.stringify({
@@ -241,36 +273,46 @@ export function Step6Protocol({ data, onBack }: Props) {
           }),
         });
         if (!createRes.ok) {
-          const body = await createRes.json() as { error?: { message?: string } };
+          const body = (await createRes.json()) as {
+            error?: { message?: string };
+          };
           throw new Error(body.error?.message ?? "Failed to create client");
         }
-        const created = await createRes.json() as { data: { id: string } };
+        const created = (await createRes.json()) as { data: { id: string } };
         clientId = created.data.id;
       }
 
-      const res = await fetch(`${apiUrl}/api/v1/clients/${clientId}/protocols/generate`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          hair: data.hair,
-          scalp: data.scalp,
-          body: data.body,
-          morphology: data.morphology,
-        }),
-      });
+      const res = await fetch(
+        `${apiUrl}/clients/${clientId}/protocols/generate`,
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            hair: data.hair,
+            scalp: data.scalp,
+            body: data.body,
+            morphology: data.morphology,
+          }),
+        },
+      );
       if (!res.ok) {
-        const body = await res.json() as { error?: { message?: string } };
+        const body = (await res.json()) as { error?: { message?: string } };
         throw new Error(body.error?.message ?? "Failed to save protocol");
       }
       window.location.href = "/dashboard";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save protocol. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to save protocol. Please try again.",
+      );
     } finally {
       setSaving(false);
     }
   };
 
-  const phaseInfo = PHASE_DESCRIPTIONS[protocol.phase] ?? PHASE_DESCRIPTIONS["Transformation"]!;
+  const phaseInfo =
+    PHASE_DESCRIPTIONS[protocol.phase] ?? PHASE_DESCRIPTIONS["Transformation"]!;
   const freq = protocol.frequency
     ? `Every ${protocol.frequency.interval} ${protocol.frequency.unit}`
     : "Every 14 days";
@@ -279,9 +321,12 @@ export function Step6Protocol({ data, onBack }: Props) {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-medium text-gray-900">Protocol Generated</h2>
+          <h2 className="text-lg font-medium text-gray-900">
+            Protocol Generated
+          </h2>
           <p className="text-sm text-gray-500 mt-1">
-            {data.firstName} {data.lastName} · Adjusted score: {protocol.score}/100
+            {data.firstName} {data.lastName} · Adjusted score: {protocol.score}
+            /100
           </p>
         </div>
         <button
@@ -299,9 +344,12 @@ export function Step6Protocol({ data, onBack }: Props) {
           <div className="flex items-start gap-3">
             <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-red-800">Services Blocked</p>
+              <p className="text-sm font-semibold text-red-800">
+                Services Blocked
+              </p>
               <p className="text-sm text-red-700 mt-1">
-                Chemical and invasive services are contraindicated. Please address the flagged conditions before proceeding.
+                Chemical and invasive services are contraindicated. Please
+                address the flagged conditions before proceeding.
               </p>
             </div>
           </div>
@@ -314,9 +362,13 @@ export function Step6Protocol({ data, onBack }: Props) {
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-amber-800 mb-1">Attention Required</p>
+              <p className="text-sm font-medium text-amber-800 mb-1">
+                Attention Required
+              </p>
               {protocol.redFlags.map((flag) => (
-                <p key={flag} className="text-sm text-amber-700 mt-0.5">{flag}</p>
+                <p key={flag} className="text-sm text-amber-700 mt-0.5">
+                  {flag}
+                </p>
               ))}
             </div>
           </div>
@@ -332,11 +384,18 @@ export function Step6Protocol({ data, onBack }: Props) {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {(["hair", "scalp", "body", "morphology"] as const).map((mod) => {
             const s = protocol.moduleScores[mod];
-            const color = s >= 70 ? "text-emerald-600" : s >= 45 ? "text-amber-600" : "text-red-500";
+            const color =
+              s >= 70
+                ? "text-emerald-600"
+                : s >= 45
+                  ? "text-amber-600"
+                  : "text-red-500";
             return (
               <div key={mod} className="text-center">
                 <div className={`text-xl font-semibold ${color}`}>{s}</div>
-                <div className="text-xs text-gray-400 capitalize mt-0.5">{mod}</div>
+                <div className="text-xs text-gray-400 capitalize mt-0.5">
+                  {mod}
+                </div>
               </div>
             );
           })}
@@ -345,18 +404,28 @@ export function Step6Protocol({ data, onBack }: Props) {
 
       {/* Phase Banner */}
       <div className={`${phaseInfo.color} text-white rounded-xl p-5`}>
-        <div className="text-xs font-medium text-white/60 uppercase tracking-wider mb-1">Assigned Phase</div>
+        <div className="text-xs font-medium text-white/60 uppercase tracking-wider mb-1">
+          Assigned Phase
+        </div>
         <div className="text-2xl font-light">{protocol.phase}</div>
-        <div className="text-sm text-white/60 mt-1">{phaseInfo.weeks} · {freq}</div>
-        <div className="text-xs text-white/50 mt-2">{phaseInfo.description}</div>
+        <div className="text-sm text-white/60 mt-1">
+          {phaseInfo.weeks} · {freq}
+        </div>
+        <div className="text-xs text-white/50 mt-2">
+          {phaseInfo.description}
+        </div>
       </div>
 
       {/* Services */}
       {!protocol.isBlocked && (
         <div className="bg-white border border-gray-100 rounded-xl p-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-900">Prescribed Services</h3>
-            <span className="text-xs text-gray-400">Tap a service for details</span>
+            <h3 className="text-sm font-medium text-gray-900">
+              Prescribed Services
+            </h3>
+            <span className="text-xs text-gray-400">
+              Tap a service for details
+            </span>
           </div>
           <div className="space-y-2">
             {protocol.services.map((service) => (
@@ -368,10 +437,15 @@ export function Step6Protocol({ data, onBack }: Props) {
 
       {/* Checkpoints */}
       <div className="bg-white border border-gray-100 rounded-xl p-5">
-        <h3 className="text-sm font-medium text-gray-900 mb-3">Progress Checkpoints</h3>
+        <h3 className="text-sm font-medium text-gray-900 mb-3">
+          Progress Checkpoints
+        </h3>
         <div className="space-y-2">
           {protocol.checkpoints.map((cp) => (
-            <div key={cp} className="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0">
+            <div
+              key={cp}
+              className="flex items-center gap-3 py-1.5 border-b border-gray-50 last:border-0"
+            >
               <div className="w-1.5 h-1.5 rounded-full bg-brand/40 flex-shrink-0" />
               <span className="text-sm text-gray-600">{cp}</span>
             </div>
@@ -380,9 +454,16 @@ export function Step6Protocol({ data, onBack }: Props) {
       </div>
 
       <div className="flex justify-between">
-        <button onClick={onBack} className="px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900">← Back</button>
         <button
-          onClick={() => { void handleSave(); }}
+          onClick={onBack}
+          className="px-4 py-2.5 text-sm text-gray-600 hover:text-gray-900"
+        >
+          ← Back
+        </button>
+        <button
+          onClick={() => {
+            void handleSave();
+          }}
           disabled={saving}
           className="w-full sm:w-auto bg-brand text-white px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-brand/90 disabled:opacity-50"
         >

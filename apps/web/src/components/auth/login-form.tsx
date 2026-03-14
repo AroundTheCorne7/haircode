@@ -19,7 +19,11 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
   });
 
@@ -27,23 +31,32 @@ export function LoginForm() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? ""}/api/v1/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? ""}/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+          credentials: "include",
+        },
+      );
       if (!res.ok) {
         const body = await res.json();
         setError(body.error?.message ?? "Invalid credentials");
         return;
       }
-      const loginResponse = await res.json() as { accessToken: string; salonName?: string; email?: string };
+      const loginResponse = (await res.json()) as {
+        accessToken: string;
+        salonName?: string;
+        email?: string;
+      };
       localStorage.setItem("hc_token", loginResponse.accessToken);
       // Also set cookie so Next.js middleware can protect dashboard routes
       document.cookie = `hc_token=${loginResponse.accessToken}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
-      if (loginResponse.salonName) localStorage.setItem("hc_salon_name", loginResponse.salonName);
-      if (loginResponse.email) localStorage.setItem("hc_user_email", loginResponse.email);
+      if (loginResponse.salonName)
+        localStorage.setItem("hc_salon_name", loginResponse.salonName);
+      if (loginResponse.email)
+        localStorage.setItem("hc_user_email", loginResponse.email);
       router.push("/dashboard");
     } catch {
       setError("Unable to connect. Please try again.");
@@ -53,9 +66,14 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="bg-white rounded-xl p-8 shadow-xl space-y-5">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="bg-white rounded-xl p-8 shadow-xl space-y-5"
+    >
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Salon Identifier</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Salon Identifier
+        </label>
         <input
           {...register("tenantSlug")}
           type="text"
@@ -63,10 +81,16 @@ export function LoginForm() {
           className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
           placeholder="your-salon-slug"
         />
-        {errors.tenantSlug && <p className="mt-1 text-xs text-red-500">{errors.tenantSlug.message}</p>}
+        {errors.tenantSlug && (
+          <p className="mt-1 text-xs text-red-500">
+            {errors.tenantSlug.message}
+          </p>
+        )}
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Email
+        </label>
         <input
           {...register("email")}
           type="email"
@@ -74,10 +98,14 @@ export function LoginForm() {
           className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
           placeholder="you@salon.com"
         />
-        {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+        {errors.email && (
+          <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>
+        )}
       </div>
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Password
+        </label>
         <input
           {...register("password")}
           type="password"
@@ -85,7 +113,9 @@ export function LoginForm() {
           className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
           placeholder="••••••••"
         />
-        {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
+        {errors.password && (
+          <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>
+        )}
       </div>
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">

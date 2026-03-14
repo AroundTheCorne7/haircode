@@ -9,7 +9,10 @@ const DEFAULT_NORMALIZERS: FieldNormalizer[] = [
   {
     fieldPath: "hair.damageIndex",
     type: "INVERTED_LINEAR",
-    inputMin: 0, inputMax: 10, outputMin: 0, outputMax: 100,
+    inputMin: 0,
+    inputMax: 10,
+    outputMin: 0,
+    outputMax: 100,
   },
   {
     fieldPath: "hair.texture",
@@ -46,51 +49,73 @@ const DEFAULT_NORMALIZERS: FieldNormalizer[] = [
     map: { "1": 55, "2": 90, "3": 55, "4": 25 },
   },
   {
-    // Route schema uses "sensitivity" (0–10 numeric), not "sensitivityLevel"
-    fieldPath: "scalp.sensitivity",
+    fieldPath: "scalp.sensitivityLevel",
     type: "INVERTED_LINEAR",
-    inputMin: 0, inputMax: 10, outputMin: 10, outputMax: 90,
+    inputMin: 1,
+    inputMax: 5,
+    outputMin: 10,
+    outputMax: 90,
   },
   {
     fieldPath: "scalp.phLevel",
     // Optimal pH ~4.5–5.5. Higher is worse.
     type: "INVERTED_LINEAR",
-    inputMin: 3.5, inputMax: 7.5, outputMin: 10, outputMax: 90,
+    inputMin: 3.5,
+    inputMax: 7.5,
+    outputMin: 10,
+    outputMax: 90,
   },
 
   // ── BODY ──────────────────────────────────────────────────────────────────
-  // Fields match route schema: hormonalIndex, nutritionalScore, stressIndex, hydrationPct
+  // Fields match wizard: sleepQualityScore, stressIndex, activityLevel, dietType
   {
-    fieldPath: "body.hormonalIndex",
-    type: "INVERTED_LINEAR",
-    inputMin: 0, inputMax: 10, outputMin: 5, outputMax: 95,
-  },
-  {
-    fieldPath: "body.nutritionalScore",
+    fieldPath: "body.sleepQualityScore",
     type: "RANGE_SCALE",
-    inputMin: 0, inputMax: 10, outputMin: 10, outputMax: 100,
+    inputMin: 1,
+    inputMax: 10,
+    outputMin: 5,
+    outputMax: 100,
   },
   {
     fieldPath: "body.stressIndex",
     type: "INVERTED_LINEAR",
-    inputMin: 0, inputMax: 10, outputMin: 5, outputMax: 100,
+    inputMin: 1,
+    inputMax: 10,
+    outputMin: 5,
+    outputMax: 100,
   },
   {
-    fieldPath: "body.hydrationPct",
-    type: "RANGE_SCALE",
-    inputMin: 0, inputMax: 100, outputMin: 0, outputMax: 100,
+    fieldPath: "body.activityLevel",
+    type: "ENUM_MAP",
+    map: { sedentary: 30, light: 55, moderate: 75, active: 85, athlete: 70 },
+  },
+  {
+    fieldPath: "body.dietType",
+    type: "ENUM_MAP",
+    map: { omnivore: 70, vegetarian: 75, vegan: 65, keto: 65, other: 60 },
   },
 
   // ── MORPHOLOGY ────────────────────────────────────────────────────────────
   {
     fieldPath: "morphology.symmetryScore",
     type: "RANGE_SCALE",
-    inputMin: 0, inputMax: 100, outputMin: 0, outputMax: 100,
+    inputMin: 0,
+    inputMax: 100,
+    outputMin: 0,
+    outputMax: 100,
   },
   {
     fieldPath: "morphology.faceShape",
     type: "ENUM_MAP",
-    map: { oval: 90, heart: 80, diamond: 78, round: 68, square: 68, oblong: 62, triangle: 62 },
+    map: {
+      oval: 90,
+      heart: 80,
+      diamond: 78,
+      round: 68,
+      square: 68,
+      oblong: 62,
+      triangle: 62,
+    },
   },
   {
     fieldPath: "morphology.undertone",
@@ -103,22 +128,25 @@ const DEFAULT_RED_FLAG_RULES: RedFlag[] = [
   {
     code: "RF_SCALP_007",
     severity: "BLOCK",
-    message: "Open scalp lesions detected — all chemical services are contraindicated until healed.",
+    message:
+      "Open scalp lesions detected — all chemical services are contraindicated until healed.",
     penaltyFactor: 1.0,
     requiresAcknowledgment: true,
   },
   {
     code: "RF_SCALP_006",
     severity: "CRITICAL",
-    message: "Seborrheic condition with elevated pH — rebalancing protocol required before transformation work.",
+    message:
+      "Seborrheic condition with elevated pH — rebalancing protocol required before transformation work.",
     penaltyFactor: 0.25,
     requiresAcknowledgment: true,
   },
   {
     code: "RF_HAIR_001",
     severity: "CRITICAL",
-    message: "Severe structural damage (damage index 10/10) — emergency repair protocol initiated.",
-    penaltyFactor: 0.30,
+    message:
+      "Severe structural damage (damage index 10/10) — emergency repair protocol initiated.",
+    penaltyFactor: 0.3,
     requiresAcknowledgment: false,
   },
 ];
@@ -130,11 +158,16 @@ export interface GenerateProtocolInput {
   morphology?: Record<string, unknown>;
 }
 
-export async function listProtocolsForClient(tenantId: string, clientId: string) {
+export async function listProtocolsForClient(
+  tenantId: string,
+  clientId: string,
+) {
   return db
     .select()
     .from(protocols)
-    .where(and(eq(protocols.tenantId, tenantId), eq(protocols.clientId, clientId)))
+    .where(
+      and(eq(protocols.tenantId, tenantId), eq(protocols.clientId, clientId)),
+    )
     .orderBy(desc(protocols.createdAt));
 }
 
@@ -142,7 +175,7 @@ export async function generateProtocol(
   tenantId: string,
   clientId: string,
   userId: string,
-  input: GenerateProtocolInput
+  input: GenerateProtocolInput,
 ) {
   // Verify client belongs to this tenant before proceeding
   const [client] = await db
@@ -157,11 +190,21 @@ export async function generateProtocol(
     throw err;
   }
 
+  // Derive openLesions from conditions array (same logic as evaluate/route.ts)
+  const conditions = Array.isArray(input.scalp.conditions)
+    ? (input.scalp.conditions as string[])
+    : [];
+  const scalpProfile: Record<string, unknown> = {
+    ...input.scalp,
+    openLesions: input.scalp.openLesions ?? conditions.includes("open_lesions"),
+    sebumProduction: String(input.scalp.sebumProduction ?? "2"),
+  };
+
   // Build the full ClientProfile for the engine
   const profile: ClientProfile = {
     clientId,
     hair: input.hair,
-    scalp: input.scalp,
+    scalp: scalpProfile,
     ...(input.body != null ? { body: input.body } : {}),
     ...(input.morphology != null ? { morphology: input.morphology } : {}),
   };
