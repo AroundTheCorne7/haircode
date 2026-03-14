@@ -64,6 +64,22 @@ export function Step3bColorIdentity({ data, onUpdate, onNext, onBack }: Props) {
         </p>
       </div>
 
+      {data.color?.colorSeason && (
+        <div className="bg-brand/5 border border-brand/10 rounded-lg p-3 flex items-start gap-2">
+          <span className="text-brand text-sm mt-0.5">&#10003;</span>
+          <div>
+            <p className="text-sm font-medium text-gray-800">
+              Pre-filled from face scan &mdash;{" "}
+              <span className="capitalize">{data.color.colorSeason}</span>
+            </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Review and adjust below if needed, or add your natural hair colour
+              and eye colour
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Colour Season */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { StepIndicator } from "./step-indicator";
 import { Step1Profile } from "./steps/step1-profile";
+import { Step2Scan } from "./steps/step2-scan";
 import { Step2Hair } from "./steps/step2-hair";
 import { Step3Scalp } from "./steps/step3-scalp";
 import { Step3bColorIdentity } from "./steps/step3b-color-identity";
@@ -51,9 +52,10 @@ export type ConsultationData = {
 
 const STEPS = [
   { label: "Profile" },
+  { label: "Scan" },
   { label: "Hair" },
   { label: "Scalp" },
-  { label: "Color" },
+  { label: "Colour" },
   { label: "Body" },
   { label: "Morph" },
   { label: "Archetype" },
@@ -68,7 +70,7 @@ export function ConsultationWizard() {
     setData((prev) => ({ ...prev, ...partial }));
   };
 
-  const next = () => setCurrentStep((s) => Math.min(s + 1, 8));
+  const next = () => setCurrentStep((s) => Math.min(s + 1, 9));
   const back = () => setCurrentStep((s) => Math.max(s - 1, 1));
 
   return (
@@ -104,7 +106,7 @@ export function ConsultationWizard() {
           <Step1Profile data={data} onUpdate={updateData} onNext={next} />
         )}
         {currentStep === 2 && (
-          <Step2Hair
+          <Step2Scan
             data={data}
             onUpdate={updateData}
             onNext={next}
@@ -112,7 +114,7 @@ export function ConsultationWizard() {
           />
         )}
         {currentStep === 3 && (
-          <Step3Scalp
+          <Step2Hair
             data={data}
             onUpdate={updateData}
             onNext={next}
@@ -120,7 +122,7 @@ export function ConsultationWizard() {
           />
         )}
         {currentStep === 4 && (
-          <Step3bColorIdentity
+          <Step3Scalp
             data={data}
             onUpdate={updateData}
             onNext={next}
@@ -128,7 +130,7 @@ export function ConsultationWizard() {
           />
         )}
         {currentStep === 5 && (
-          <Step4Body
+          <Step3bColorIdentity
             data={data}
             onUpdate={updateData}
             onNext={next}
@@ -136,7 +138,7 @@ export function ConsultationWizard() {
           />
         )}
         {currentStep === 6 && (
-          <Step5Morphology
+          <Step4Body
             data={data}
             onUpdate={updateData}
             onNext={next}
@@ -144,6 +146,14 @@ export function ConsultationWizard() {
           />
         )}
         {currentStep === 7 && (
+          <Step5Morphology
+            data={data}
+            onUpdate={updateData}
+            onNext={next}
+            onBack={back}
+          />
+        )}
+        {currentStep === 8 && (
           <Step5bArchetype
             data={data}
             onUpdate={updateData}
@@ -151,7 +161,7 @@ export function ConsultationWizard() {
             onBack={back}
           />
         )}
-        {currentStep === 8 && <Step6Protocol data={data} onBack={back} />}
+        {currentStep === 9 && <Step6Protocol data={data} onBack={back} />}
       </div>
     </div>
   );
