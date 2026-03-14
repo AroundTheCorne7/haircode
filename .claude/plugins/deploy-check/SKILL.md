@@ -34,7 +34,7 @@ curl -s https://haircode-api.onrender.com/health --max-time 15
 
 ## Check 3 — Vercel web
 ```bash
-curl -s -o /dev/null -w "%{http_code}" https://haircode.vercel.app --max-time 15
+curl -s -o /dev/null -w "%{http_code}" https://haircode-nine.vercel.app --max-time 15
 ```
 - 200 → ✅ Vercel web is live
 - Non-200 → ❌ check Vercel dashboard

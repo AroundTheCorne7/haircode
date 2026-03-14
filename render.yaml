@@ -11,7 +11,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: APP_URL
-        value: https://haircode.vercel.app
+        value: https://haircode-nine.vercel.app
       - key: API_URL
         value: https://haircode-api.onrender.com
       - key: DATABASE_URL
