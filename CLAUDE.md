@@ -1,88 +1,89 @@
 # HairCode™ — Project Instructions
 
 ## What This Is
-B2B SaaS decision engine for premium hair salons. A 6-step consultation wizard collects client data (hair, scalp, body, morphology) and runs it through a rule-based scoring engine to generate personalized treatment protocols.
+B2B SaaS for premium hair salons. 8-step consultation wizard → rule-based scoring engine → personalized treatment protocols + transformation blueprint.
 
 ## Monorepo Structure
 ```
-apps/web          Next.js 15, App Router, React 19, PWA — frontend
-apps/api          Fastify v5, JWT, Drizzle ORM — REST API
-packages/engine   Rule-based decision engine (pure TypeScript, no DB)
-packages/db       Drizzle ORM schemas + migrations for PostgreSQL/Supabase
+apps/web          Next.js 15, App Router, React 19, PWA
+apps/api          Fastify v5, JWT, Drizzle ORM
+packages/engine   Rule-based decision engine (pure TS, no DB)
+packages/db       Drizzle ORM schemas + migrations (Supabase)
 packages/ui       Shared shadcn/ui components
 ```
 
 ## Key Commands
 ```bash
-pnpm --filter @haircode/web dev          # Start web on :3000
-pnpm --filter @haircode/api dev          # Start API on :3001
-pnpm --filter @haircode/engine test      # Run 12 engine unit tests (vitest)
-pnpm --filter @haircode/engine build     # Build engine (required after index.ts changes)
-pnpm --filter @haircode/web type-check   # TypeScript check — web
-pnpm --filter @haircode/api type-check   # TypeScript check — API
-pnpm install                             # Install all workspace deps
+pnpm --filter @haircode/web dev
+pnpm --filter @haircode/api dev
+pnpm --filter @haircode/engine test
+pnpm --filter @haircode/engine build    # required after engine/src/index.ts changes
+pnpm --filter @haircode/web type-check
+pnpm --filter @haircode/api type-check
+pnpm --filter @haircode/db db:generate  # drizzle migration codegen
+pnpm --filter @haircode/db db:migrate   # apply to Supabase
 ```
 
 ## Critical TypeScript Rules
-- `exactOptionalPropertyTypes: true` is ON everywhere — never pass `undefined` to optional DB fields, use `?? null` or spread with conditional
-- Engine is ESM (`"type": "module"`) — imports must use `.js` extension in source
-- After modifying `packages/engine/src/index.ts`, always run `pnpm --filter @haircode/engine build` before using from web/api
+- `exactOptionalPropertyTypes: true` everywhere — use `?? null` or `...(x != null ? { prop: x } : {})` for optional fields
+- Engine is ESM — imports use `.js` extension in source
+- After changing `engine/src/index.ts` → always rebuild engine before using from web/api
 
-## Architecture Decisions
-- **JWT payload**: `{ sub: userId, tenantId, roles[] }` — use `sub`, NOT `userId`
-- **Multi-tenant**: every DB table has `tenantId`; tenant middleware validates JWT and sets `req.user`
-- **Engine integration**: web app calls `/api/evaluate` (Next.js route) → imports `@haircode/engine` directly (no Fastify API needed for consultation flow)
-- **Protocol generation**: Fastify API at `POST /clients/:id/protocols/generate` also calls engine (for saved protocols)
-- **Normalizers**: form range inputs return strings — normalizer ENUM_MAPs use string keys like `"1"`, `"2"` etc.
+## Architecture
+- **JWT**: `{ sub: userId, tenantId, roles[] }` — use `sub`, not `userId`
+- **Multi-tenant**: every table has `tenantId`; middleware validates JWT → `req.user`
+- **Evaluate flow**: web `/api/evaluate` (Next.js route) imports `@haircode/engine` directly
+- **Protocol save**: Fastify `POST /clients/:id/protocols/generate` also calls engine
+- **Normalizers**: range inputs are strings — ENUM_MAPs use string keys `"1"`, `"2"` etc.
+- **DB migration**: uses `node --require tsx/cjs bin.cjs` to bypass drizzle-kit ESM/CJS conflict
 
 ## DB Schema Key Fields
 - `clients`: `firstName`, `lastName`, `primaryEmail`, `primaryPhone`, `gdprConsentGiven`, `gdprConsentGivenAt`
-- `users`: no `name` field — use `email` + `passwordHash` + `role`
-- `protocols`: `objective` field stores phase+score summary; `createdBy` is userId (NOT NULL)
+- `users`: no `name` — use `email` + `passwordHash` + `role`
+- `protocols`: `objective` stores phase+score summary; `createdBy` is userId (NOT NULL)
+- `color_profiles`: `colorSeason`, `contrastScore` (smallint 1-5), `undertone`
+- `archetype_profiles`: `primaryArchetype` NOT NULL, `primaryWeight`, optional secondary
+- `transformation_blueprints`: JSONB columns for all design engine output
 
 ## Engine Pipeline
 ```
 evaluate(input) →
-  1. computeModuleScores(profile, normalizers, weights)  — normalise fields → 0-100 per module
-  2. computeCompositeScore(moduleScores, weights.modules) — weighted average
-  3. evaluateRedFlags(profile, redFlagRules)             — penalty factors + BLOCK
-  4. adjustedScore = compositeScore × (1 - totalPenalty)
-  5. evaluateRules(rules, ctx)                           — SET_PHASE / ADD_SERVICE / ADJUST_SCORE
-  6. assignPhase(adjustedScore, flags): ≤40=stabilization, 41-65=transformation, ≥66=integration
-  7. generatePhases(phase, score, flags)                 — checkpoints + duration
+  1-4. Score modules → composite → red flags → adjustedScore
+  5.   evaluateRules → SET_PHASE / ADD_SERVICE / ADJUST_SCORE
+  6.   assignPhase: ≤40=stabilization, 41-65=transformation, ≥66=integration
+  7.   generatePhases → checkpoints + duration
+  10.  runDesignEngine → TransformationBlueprintOutput (6-layer methodology)
+        L1 face-morphology → L2 hair-structure → L3 body → L4 color → L5 archetype → L6 scalp
+        cross-layer-resolver applies priority rules; conflicts recorded
 ```
 
-## Consultation Wizard Data Flow
-- Steps 1-5 collect data into `ConsultationData` state in `wizard.tsx`
-- Step 6 POSTs to `/api/evaluate` (Next.js route) with `{ hair, scalp, body, morphology }`
-- Route at `apps/web/src/app/api/evaluate/route.ts` runs real engine, returns real scores
+## Consultation Wizard (8 steps)
+- Steps 1-7 collect `ConsultationData` in `wizard.tsx` (incl. step3b color identity, step5b archetype)
+- Step 8 POSTs to `/api/evaluate` → runs engine → returns scores + blueprint
+- Route: `apps/web/src/app/api/evaluate/route.ts`
 
 ## Red Flag Codes
-- `RF_SCALP_007` → BLOCK (open lesions — all services contraindicated)
-- `RF_SCALP_006` → CRITICAL (seborrheic + pH > 6.0 — 25% penalty)
-- `RF_HAIR_001` → CRITICAL (damage index ≥ 10 — 30% penalty)
-
-## Security (All Fixed as of 2026-03-05)
-- Login requires `tenantSlug` + calls `verifyCredentials()` (bcrypt)
-- `gdprConsentGiven` is `z.literal(true)` — false is rejected
-- Rate limit plugin registered; global error handler hides DB internals
-- LIKE wildcards escaped in search params; UUID validation on `:id` params
+- `RF_SCALP_007` → BLOCK (open lesions)
+- `RF_SCALP_006` → CRITICAL 25% penalty (seborrheic + pH > 6.0)
+- `RF_HAIR_001` → CRITICAL 30% penalty (damage index ≥ 10)
 
 ## Common Gotchas
-- Range inputs → always strings unless `{ valueAsNumber: true }` is set
-- `scalp.conditions` from RHF can be `undefined | string | string[]` (0/1/multiple checkboxes)
-- `scalp.openLesions` is derived from `conditions.includes("open_lesions")` at evaluation time
-- Engine `DEFAULT_RULES` compare against exact string values — `"HIGH"` ≠ `"high"`
-- Phase banner color: stabilization=amber, transformation=brand(#1A1A2E), integration=emerald
+- Range inputs → always strings unless `{ valueAsNumber: true }`
+- `scalp.conditions` from RHF can be `undefined | string | string[]`
+- `scalp.openLesions` derived from `conditions.includes("open_lesions")`
+- `DEFAULT_RULES` compare exact strings — `"HIGH"` ≠ `"high"`
+- Phase banner: stabilization=amber, transformation=brand(#1A1A2E), integration=emerald
 
-## File Paths — Most Edited
+## Key File Paths
 ```
-apps/web/src/app/(dashboard)/settings/page.tsx
-apps/web/src/components/consultation/steps/step*.tsx
-apps/web/src/components/layout/topbar.tsx
-apps/web/src/app/api/evaluate/route.ts
-apps/api/src/routes/auth.ts | clients.ts | protocols.ts
+apps/web/src/components/consultation/steps/step*.tsx      wizard steps
+apps/web/src/app/api/evaluate/route.ts                    evaluation endpoint
+apps/api/src/routes/auth.ts | clients.ts | protocols.ts   API routes
 apps/api/src/services/protocol.service.ts
-packages/engine/src/index.ts | normalizer.ts | red-flag.ts | default-rules.ts
-packages/db/src/schema/
+packages/engine/src/index.ts                              pipeline orchestration
+packages/engine/src/design-engine.ts                      6-layer design engine
+packages/engine/src/cross-layer-resolver.ts               conflict resolution
+packages/engine/src/rules/                                face/color/archetype/body rules
+packages/engine/src/types.ts                              all engine types
+packages/db/src/schema/                                   all DB schemas
 ```
