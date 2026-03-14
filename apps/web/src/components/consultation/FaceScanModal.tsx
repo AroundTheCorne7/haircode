@@ -9,7 +9,14 @@ type FaceApiModule = typeof import("@vladmandic/face-api");
 const MODEL_URL =
   "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.14/model/";
 
-type FaceShape = "oval" | "round" | "square" | "heart" | "diamond" | "oblong" | "triangle";
+type FaceShape =
+  | "oval"
+  | "round"
+  | "square"
+  | "heart"
+  | "diamond"
+  | "oblong"
+  | "triangle";
 type Undertone = "warm" | "neutral" | "cool";
 type ContrastLevel = "low" | "medium" | "high";
 
@@ -19,7 +26,10 @@ export interface DetectedFeatures {
   contrastLevel: ContrastLevel;
 }
 
-interface Point { x: number; y: number }
+interface Point {
+  x: number;
+  y: number;
+}
 
 function dist(a: Point, b: Point) {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
@@ -28,32 +38,38 @@ function dist(a: Point, b: Point) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function detectFaceShape(landmarks: any): FaceShape {
   const pts: Point[] = landmarks.positions;
-  const faceWidth    = dist(pts[0]!, pts[16]!);
-  const jawWidth     = dist(pts[3]!, pts[13]!);
+  const faceWidth = dist(pts[0]!, pts[16]!);
+  const jawWidth = dist(pts[3]!, pts[13]!);
   const foreheadWidth = dist(pts[17]!, pts[26]!);
-  const browMidY     = ((pts[19]?.y ?? 0) + (pts[24]?.y ?? 0)) / 2;
-  const chinY        = pts[8]!.y;
-  const faceHeight   = Math.abs(chinY - browMidY) * 1.5;
+  const browMidY = ((pts[19]?.y ?? 0) + (pts[24]?.y ?? 0)) / 2;
+  const chinY = pts[8]!.y;
+  const faceHeight = Math.abs(chinY - browMidY) * 1.5;
 
   if (faceWidth === 0) return "oval";
-  const hwRatio        = faceHeight / faceWidth;
-  const jawRatio       = jawWidth / faceWidth;
-  const foreheadRatio  = foreheadWidth / faceWidth;
+  const hwRatio = faceHeight / faceWidth;
+  const jawRatio = jawWidth / faceWidth;
+  const foreheadRatio = foreheadWidth / faceWidth;
 
   if (hwRatio > 1.65) return "oblong";
-  if (hwRatio < 1.10) return "round";
+  if (hwRatio < 1.1) return "round";
   if (jawRatio > 0.88) return "square";
   if (foreheadRatio - jawRatio > 0.12) return "heart";
   if (foreheadRatio < 0.78 && jawRatio < 0.78) return "diamond";
-  if (jawRatio - foreheadRatio > 0.10) return "triangle";
+  if (jawRatio - foreheadRatio > 0.1) return "triangle";
   return "oval";
 }
 
 function avgRGB(data: ImageData): { r: number; g: number; b: number } {
-  let r = 0, g = 0, b = 0, count = 0;
+  let r = 0,
+    g = 0,
+    b = 0,
+    count = 0;
   for (let i = 0; i < data.data.length; i += 4) {
     // Skip very dark pixels (shadows/hair mixed in) and very bright (blown highlights)
-    const lum = 0.299 * data.data[i]! + 0.587 * data.data[i + 1]! + 0.114 * data.data[i + 2]!;
+    const lum =
+      0.299 * data.data[i]! +
+      0.587 * data.data[i + 1]! +
+      0.114 * data.data[i + 2]!;
     if (lum < 30 || lum > 230) continue;
     r += data.data[i]!;
     g += data.data[i + 1]!;
@@ -72,7 +88,12 @@ function analyzeAppearance(
   const ctx = canvas.getContext("2d");
   if (!ctx) return { undertone: "neutral", contrastLevel: "medium" };
 
-  const { x, y, width, height } = box as { x: number; y: number; width: number; height: number };
+  const { x, y, width, height } = box as {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
 
   // Skin: centre of face (nose/cheek area, avoiding hairline & jaw edges)
   const skinX = Math.max(0, x + width * 0.25);
@@ -87,18 +108,21 @@ function analyzeAppearance(
   const hairH = Math.min(y - hairY, height * 0.3);
   const hairX = Math.max(0, x + width * 0.15);
   const hairW = Math.min(canvas.width - hairX, width * 0.7);
-  const hairData = hairH > 4 ? ctx.getImageData(hairX, hairY, hairW, hairH) : skinData;
+  const hairData =
+    hairH > 4 ? ctx.getImageData(hairX, hairY, hairW, hairH) : skinData;
   const hair = avgRGB(hairData);
 
   // Undertone: warm skin has more red than blue; cool has more blue
   const warmBias = skin.r - skin.b;
-  const undertone: Undertone = warmBias > 18 ? "warm" : warmBias < -8 ? "cool" : "neutral";
+  const undertone: Undertone =
+    warmBias > 18 ? "warm" : warmBias < -8 ? "cool" : "neutral";
 
   // Contrast: luminance difference between skin and hair
   const skinLum = 0.299 * skin.r + 0.587 * skin.g + 0.114 * skin.b;
   const hairLum = 0.299 * hair.r + 0.587 * hair.g + 0.114 * hair.b;
   const diff = Math.abs(skinLum - hairLum);
-  const contrastLevel: ContrastLevel = diff > 85 ? "high" : diff > 40 ? "medium" : "low";
+  const contrastLevel: ContrastLevel =
+    diff > 85 ? "high" : diff > 40 ? "medium" : "low";
 
   return { undertone, contrastLevel };
 }
@@ -118,23 +142,32 @@ type Status =
   | "error";
 
 const SHAPE_LABELS: Record<FaceShape, string> = {
-  oval: "Oval", round: "Round", square: "Square", heart: "Heart",
-  diamond: "Diamond", oblong: "Oblong", triangle: "Triangle",
+  oval: "Oval",
+  round: "Round",
+  square: "Square",
+  heart: "Heart",
+  diamond: "Diamond",
+  oblong: "Oblong",
+  triangle: "Triangle",
 };
 const UNDERTONE_LABELS: Record<Undertone, string> = {
-  warm: "Warm", neutral: "Neutral", cool: "Cool",
+  warm: "Warm",
+  neutral: "Neutral",
+  cool: "Cool",
 };
 const CONTRAST_LABELS: Record<ContrastLevel, string> = {
-  low: "Low", medium: "Medium", high: "High",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
 };
 
 export function FaceScanModal({ onDetected, onClose }: Props) {
-  const videoRef  = useRef<HTMLVideoElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const faceApiRef = useRef<FaceApiModule | null>(null);
 
-  const [status, setStatus]     = useState<Status>("loading-models");
+  const [status, setStatus] = useState<Status>("loading-models");
   const [statusMsg, setStatusMsg] = useState("Loading AI models…");
   const [detected, setDetected] = useState<DetectedFeatures | null>(null);
 
@@ -155,12 +188,16 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
       } catch {
         if (!cancelled) {
           setStatus("error");
-          setStatusMsg("Failed to load AI models. Please check your connection.");
+          setStatusMsg(
+            "Failed to load AI models. Please check your connection.",
+          );
         }
       }
     };
     void load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Start camera
@@ -170,16 +207,38 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
     const start = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+          video: {
+            facingMode: "user",
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+          },
         });
-        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
         streamRef.current = stream;
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          const video = videoRef.current;
+          video.srcObject = stream;
+          // Wait for actual video frames before showing "live"
+          await new Promise<void>((resolve) => {
+            const onReady = () => {
+              video.removeEventListener("loadeddata", onReady);
+              resolve();
+            };
+            if (video.readyState >= 2) {
+              resolve();
+            } else {
+              video.addEventListener("loadeddata", onReady);
+            }
+            void video.play();
+          });
         }
-        setStatus("live");
-        setStatusMsg("");
+        if (!cancelled) {
+          setStatus("live");
+          setStatusMsg("");
+        }
       } catch {
         if (!cancelled) {
           setStatus("error");
@@ -195,8 +254,8 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
   }, [status]);
 
   const capture = useCallback(async () => {
-    const video   = videoRef.current;
-    const canvas  = canvasRef.current;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
     const faceapi = faceApiRef.current;
     if (!video || !canvas || !faceapi) return;
 
@@ -205,25 +264,37 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    canvas.width  = video.videoWidth;
+    canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0);
 
     try {
       const result = await faceapi
-        .detectSingleFace(canvas, new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }))
+        .detectSingleFace(
+          canvas,
+          new faceapi.TinyFaceDetectorOptions({ scoreThreshold: 0.4 }),
+        )
         .withFaceLandmarks(true);
 
       if (!result) {
         setStatus("no-face");
-        setStatusMsg("No face detected — please centre your face and try again.");
+        setStatusMsg(
+          "No face detected — please centre your face and try again.",
+        );
         return;
       }
 
-      const faceShape   = detectFaceShape(result.landmarks);
-      const { undertone, contrastLevel } = analyzeAppearance(canvas, result.detection.box);
+      const faceShape = detectFaceShape(result.landmarks);
+      const { undertone, contrastLevel } = analyzeAppearance(
+        canvas,
+        result.detection.box,
+      );
 
-      const features: DetectedFeatures = { faceShape, undertone, contrastLevel };
+      const features: DetectedFeatures = {
+        faceShape,
+        undertone,
+        contrastLevel,
+      };
       setDetected(features);
       setStatus("detected");
       streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -246,17 +317,24 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
         <div className="flex items-center justify-between px-5 py-4 border-b">
           <div>
             <p className="text-sm font-semibold text-gray-900">Face Scan</p>
-            <p className="text-xs text-gray-400 mt-0.5">Detects shape · undertone · contrast · processed on-device</p>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Detects shape · undertone · contrast · processed on-device
+            </p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+          >
             <XCircle className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
         {/* Video area */}
         <div className="relative bg-black aspect-[4/3] overflow-hidden">
+          {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
           <video
             ref={videoRef}
+            autoPlay
             playsInline
             muted
             className={`absolute inset-0 w-full h-full object-cover scale-x-[-1] ${status === "detected" ? "opacity-25" : "opacity-100"}`}
@@ -271,7 +349,9 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
           )}
 
           {/* Loading / capturing spinner */}
-          {(status === "loading-models" || status === "requesting-camera" || status === "capturing") && (
+          {(status === "loading-models" ||
+            status === "requesting-camera" ||
+            status === "capturing") && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/50">
               <div className="w-8 h-8 border-4 border-white/30 border-t-white rounded-full animate-spin" />
               <p className="text-sm text-white text-center px-6">{statusMsg}</p>
@@ -282,18 +362,28 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
           {status === "detected" && detected && (
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="bg-white rounded-xl px-5 py-4 shadow-xl text-center space-y-3 w-56">
-                <p className="text-xs text-gray-400 uppercase tracking-wider">Detected</p>
+                <p className="text-xs text-gray-400 uppercase tracking-wider">
+                  Detected
+                </p>
                 <div className="grid grid-cols-3 gap-2 text-center">
                   <div>
-                    <p className="text-base font-semibold text-gray-900">{SHAPE_LABELS[detected.faceShape]}</p>
+                    <p className="text-base font-semibold text-gray-900">
+                      {SHAPE_LABELS[detected.faceShape]}
+                    </p>
                     <p className="text-[10px] text-gray-400 mt-0.5">Shape</p>
                   </div>
                   <div>
-                    <p className="text-base font-semibold text-gray-900">{UNDERTONE_LABELS[detected.undertone]}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">Undertone</p>
+                    <p className="text-base font-semibold text-gray-900">
+                      {UNDERTONE_LABELS[detected.undertone]}
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">
+                      Undertone
+                    </p>
                   </div>
                   <div>
-                    <p className="text-base font-semibold text-gray-900">{CONTRAST_LABELS[detected.contrastLevel]}</p>
+                    <p className="text-base font-semibold text-gray-900">
+                      {CONTRAST_LABELS[detected.contrastLevel]}
+                    </p>
                     <p className="text-[10px] text-gray-400 mt-0.5">Contrast</p>
                   </div>
                 </div>
@@ -313,7 +403,9 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
         <div className="px-5 py-4 flex gap-3">
           {status === "live" && (
             <button
-              onClick={() => { void capture(); }}
+              onClick={() => {
+                void capture();
+              }}
               className="flex-1 flex items-center justify-center gap-2 bg-brand text-white py-2.5 rounded-lg text-sm font-medium hover:bg-brand/90 transition-colors"
             >
               <Camera className="w-4 h-4" />
@@ -350,8 +442,13 @@ export function FaceScanModal({ onDetected, onClose }: Props) {
             </>
           )}
 
-          {(status === "loading-models" || status === "requesting-camera" || status === "capturing") && (
-            <button disabled className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed">
+          {(status === "loading-models" ||
+            status === "requesting-camera" ||
+            status === "capturing") && (
+            <button
+              disabled
+              className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed"
+            >
               Capture
             </button>
           )}
